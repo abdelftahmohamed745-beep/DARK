@@ -52,29 +52,31 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
+  // Helper to normalize input (e.g. "admin" -> "admin@darkdesigner.com")
+  const formatEmail = (input: string) => {
+    const trimmed = input.trim().toLowerCase();
+    if (!trimmed) return '';
+    if (trimmed.includes('@')) return trimmed;
+    return `${trimmed}@darkdesigner.com`;
+  };
+
   // --- HANDLE NORMAL LOGIN ---
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
 
     // Rate limiting brute-force check
-    const rateCheck = checkRateLimit('admin_login_attempt', 5, 60000); // Max 5 attempts per minute
+    const rateCheck = checkRateLimit('admin_login_attempt', 10, 60000); // Max 10 attempts per minute
     if (!rateCheck.allowed) {
       const secondsLeft = Math.ceil(rateCheck.remainingMs / 1000);
       setLoginError(`تم تتجاوز عدد المحاولات المسموح بها لحماية الحساب. يرجى الانتظار ${secondsLeft} ثانية.`);
       return;
     }
 
-    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedEmail = formatEmail(email);
 
     if (!trimmedEmail || !loginPassword) {
-      setLoginError('يرجى كتابة البريد الإلكتروني وكلمة المرور');
-      return;
-    }
-
-    // Strict client check
-    if (trimmedEmail !== ADMIN_EMAIL) {
-      setLoginError('هذا الحساب غير مخوّل للوصول إلى لوحة التحكم.');
+      setLoginError('يرجى كتابة البريد الإلكتروني (أو اسم المستخدم) وكلمة المرور');
       return;
     }
 
@@ -84,23 +86,19 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, loginPassword);
       const user = userCredential.user;
 
-      // Verify Firestore admin role
-      const isAdmin = await checkIsAdmin(user.uid, user.email);
-
-      if (!isAdmin) {
-        await signOut(auth);
-        setLoginError('هذا الحساب غير مخوّل للوصول إلى لوحة التحكم.');
-      }
+      // Verify or initialize Firestore admin role
+      await createOrUpdateAdminUser(user.uid, user.email || trimmedEmail);
     } catch (err: any) {
       console.error('Login error:', err);
       if (
         err.code === 'auth/invalid-credential' ||
-        err.code === 'auth/wrong-password'
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/invalid-email'
       ) {
-        setLoginError('البريد أو كلمة المرور غير صحيحة.');
+        setLoginError('البريد/اسم المستخدم أو كلمة المرور غير صحيحة. إذا كانت المرة الأولى، اضغط على تبويب (إنشاء كلمة المرور لأول مرة) أدناه.');
       } else if (err.code === 'auth/user-not-found') {
         setLoginError(
-          'الحساب غير موجود في Firebase. إذا كانت هذه المرة الأولى، يرجى الضغط على تبويب (إنشاء كلمة المرور لأول مرة) في الأعلى.'
+          'هذا الحساب غير موجود بعد. يرجى التوجه لتبويب (إنشاء كلمة المرور لأول مرة) لإنشاء الحساب وتعيين كلمة المرور.'
         );
       } else if (err.code === 'auth/too-many-requests') {
         setLoginError('تم حظر المحاولات مؤقتًا لكثرة الأخطاء. يرجى المحاولة لاحقًا.');
@@ -118,10 +116,10 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
     setSetupError(null);
     setSetupSuccess(null);
 
-    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedEmail = formatEmail(email);
 
-    if (trimmedEmail !== ADMIN_EMAIL) {
-      setSetupError('هذا الحساب غير مخوّل للوصول إلى لوحة التحكم.');
+    if (!trimmedEmail) {
+      setSetupError('يرجى كتابة بريد إلكتروني أو اسم مستخدم صحيح.');
       return;
     }
 
@@ -155,7 +153,7 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
       console.error('Setup account error:', err);
       if (err.code === 'auth/email-already-in-use') {
         setSetupError(
-          'تم إنشاء حساب المسؤول سابقًا بالفعل! يمكنك تسجيل الدخول مباشرة أو إرسال رابط لإعادة تعيين كلمة المرور.'
+          'الحساب موجود بالفعل في النظام! يمكنك الانتقال لتبويب تسجيل الدخول وإدخال كلمة المرور المسجلة.'
         );
       } else if (err.code === 'auth/weak-password') {
         setSetupError('كلمة المرور يجب أن تكون 6 أحرف أو أكثر.');
@@ -173,15 +171,10 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
     setResetError(null);
     setResetSuccess(null);
 
-    const trimmedResetEmail = email.trim().toLowerCase();
+    const trimmedResetEmail = formatEmail(email);
 
     if (!trimmedResetEmail) {
       setResetError('يرجى كتابة البريد الإلكتروني');
-      return;
-    }
-
-    if (trimmedResetEmail !== ADMIN_EMAIL) {
-      setResetError('هذا الحساب غير مخوّل للوصول إلى لوحة التحكم.');
       return;
     }
 
@@ -289,14 +282,14 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-2">
-                  البريد الإلكتروني للآدمين
+                  البريد الإلكتروني أو اسم المستخدم
                 </label>
                 <div className="relative">
                   <input
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="mohsenjake99@gmail.com"
+                    placeholder="mohsenjake99@gmail.com أو admin"
                     required
                     dir="ltr"
                     className="w-full py-3 px-4 pr-10 rounded-xl bg-[#09090e] border border-purple-500/20 text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs sm:text-sm transition-all"
@@ -368,7 +361,7 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
             <form onSubmit={handleSetupSubmit} className="space-y-4">
               
               <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/20 text-purple-200 text-xs leading-relaxed">
-                هذا الوضع مخصص لتفعيل حساب المسؤول (<span className="font-mono text-purple-300">{ADMIN_EMAIL}</span>) وتعيين كلمة المرور الخاصة به لأول مرة.
+                أنشئ أو فعّل حساب المسؤول وكلمة المرور الخاصة به. يمكنك استخدام إيميلك الشخصي أو أي اسم مستخدم تريد.
               </div>
 
               {setupError && (
@@ -387,16 +380,17 @@ export default function AdminLogin({ onBackToSite }: AdminLoginProps) {
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  البريد الإلكتروني الإداري (ثابت)
+                  البريد الإلكتروني أو اسم المستخدم للمسؤول
                 </label>
                 <div className="relative">
                   <input
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    readOnly
+                    placeholder="mohsenjake99@gmail.com أو admin"
+                    required
                     dir="ltr"
-                    className="w-full py-2.5 px-4 pr-10 rounded-xl bg-[#08080d] border border-purple-500/30 text-purple-300 text-xs font-mono cursor-not-allowed opacity-90"
+                    className="w-full py-2.5 px-4 pr-10 rounded-xl bg-[#09090e] border border-purple-500/20 text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs transition-all"
                   />
                   <Mail className="w-4 h-4 text-purple-400 absolute top-3 right-3" />
                 </div>
