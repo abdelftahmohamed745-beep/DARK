@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .glow-purple {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.25);
+  }
+  .glow-purple-lg {
+    box-shadow: 0 0 50px -10px rgba(168, 85, 247, 0.5);
+  }
+  .text-electric {
+    color: #A855F7;
+  }
+  .bg-charcoal {
+    background-color: #121212;
+  }
+  .border-accent {
+    border-color: rgba(168, 85, 247, 0.3);
+  }
+  .text-glow-purple {
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+  }
+  .border-glow {
+    border-color: rgba(168, 85, 247, 0.3);
+    box-shadow: inset 0 0 15px rgba(168, 85, 247, 0.1);
+  }
+  .hero-gradient {
+    background: radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f1f2e;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a855f7;
+}
+
+/* Background Grid Pattern */
+.bg-grid-pattern {
+  background-size: 30px 30px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.bg-radial-purple {
+  background: radial-gradient(circle at 50% 20%, rgba(168, 85, 247, 0.15) 0%, rgba(5, 5, 5, 0) 70%);
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes introBar {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s infinite ease-in-out;
+}
+
+.animate-intro-bar {
+  animation: introBar 1.5s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.animate-spin-slow {
+  animation: spinSlow 12s linear infinite;
+}
+
+/* Quiet Mode (Disable animations & heavy transitions) */
+html.quiet-mode *,
+html.quiet-mode *::before,
+html.quiet-mode *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Touch and Hover Feedback Utilities */
+@media (hover: hover) {
+  .hover-glow:hover {
+    box-shadow: 0 0 25px rgba(168, 85, 247, 0.4);
+  }
+}
+
+/* Touch target enhancement for mobile devices */
+@media (pointer: coarse) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+}
+

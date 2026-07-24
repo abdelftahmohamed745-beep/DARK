@@ -1,0 +1,6 @@
+{
+  "name": "DARK designer",
+  "description": "معرض أعمال وخدمات مصمم الجرافيك المحترف DARK designer - تصاميم سوشيال ميديا، لوجوهات، وهويات بصرية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
