@@ -87,6 +87,7 @@ export default function AdminDashboard({ user, onViewSite }: AdminDashboardProps
   const [imageUploads, setImageUploads] = useState<ImageUploadItem[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Delete Confirm Modal
   const [deletingProject, setDeletingProject] = useState<PortfolioItem | null>(null);
@@ -177,16 +178,14 @@ export default function AdminDashboard({ user, onViewSite }: AdminDashboardProps
     }
   };
 
-  // Handle files selected for upload
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
+  // Process selected or dropped image files
+  const processFiles = async (files: File[]) => {
+    if (!files || files.length === 0) return;
 
-    const files = Array.from(e.target.files) as File[];
-    
     for (const file of files) {
       const validation = validateImageFile(file);
       if (!validation.valid) {
-        alert(validation.error || 'الملف المرفق غير صالح.');
+        setFormError(validation.error || 'الملف المرفق غير صالح.');
         continue;
       }
 
@@ -195,7 +194,7 @@ export default function AdminDashboard({ user, onViewSite }: AdminDashboardProps
       const newUploadItem: ImageUploadItem = {
         id: uploadId,
         file,
-        progress: 0,
+        progress: 10,
         status: 'uploading',
       };
 
@@ -220,7 +219,7 @@ export default function AdminDashboard({ user, onViewSite }: AdminDashboardProps
         setImageUploads((prev) =>
           prev.map((item) =>
             item.id === uploadId
-              ? { ...item, status: 'error', error: 'فشل رفع الصورة' }
+              ? { ...item, status: 'error', error: err?.message || 'فشل رفع الصورة' }
               : item
           )
         );
@@ -228,6 +227,34 @@ export default function AdminDashboard({ user, onViewSite }: AdminDashboardProps
     }
 
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      processFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(Array.from(e.dataTransfer.files));
+    }
   };
 
   // Delete an image from the current upload list
@@ -1030,7 +1057,14 @@ export default function AdminDashboard({ user, onViewSite }: AdminDashboardProps
 
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-purple-500/30 hover:border-purple-500 rounded-2xl p-6 text-center bg-[#0a0a10] hover:bg-purple-950/20 transition-all cursor-pointer group"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer group ${
+                    isDragging
+                      ? 'border-purple-400 bg-purple-950/40 scale-[1.01]'
+                      : 'border-purple-500/30 hover:border-purple-500 bg-[#0a0a10] hover:bg-purple-950/20'
+                  }`}
                 >
                   <input
                     type="file"
