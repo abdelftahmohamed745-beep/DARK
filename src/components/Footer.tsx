@@ -75,6 +75,19 @@ export default function Footer() {
               <li><a href="#portfolio" className="hover:text-purple-300 transition-colors">معرض الأعمال</a></li>
               <li><a href="#why-us" className="hover:text-purple-300 transition-colors">لماذا تختارنا</a></li>
               <li><a href="#contact" className="hover:text-purple-300 transition-colors">تواصل معنا</a></li>
+              <li>
+                <a
+                  href="/admin"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', '/admin');
+                    window.dispatchEvent(new Event('popstate'));
+                  }}
+                  className="hover:text-purple-300 transition-colors text-purple-400/80 hover:text-purple-300 font-semibold"
+                >
+                  لوحة التحكم (Admin)
+                </a>
+              </li>
             </ul>
           </div>
 
