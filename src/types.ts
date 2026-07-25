@@ -31,6 +31,7 @@ export interface Testimonial {
 export interface ServiceItem {
   id: string;
   title: string;
+  titleAr?: string;
   iconName: string;
   shortDesc: string;
   features: string[];
